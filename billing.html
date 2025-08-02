@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dental Invoice - SHREE DENTAL STORE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <style>
+    * { box-sizing: border-box; font-family: 'Poppins', sans-serif; }
+    body { background: #eaf3fc; margin: 0; padding: 20px; }
+    .invoice-box {
+      max-width: 1100px;
+      margin: auto;
+      background: #ffffff;
+      padding: 30px 40px;
+      border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .header {
+      text-align: center;
+      border-bottom: 2px solid #004aad;
+      margin-bottom: 20px;
+      padding-bottom: 15px;
+    }
+    .header img {
+      height: 60px;
+    }
+    .header h2 { margin: 10px 0 5px; color: #004aad; }
+    .contact {
+      font-size: 14px;
+      color: #333;
+      margin-bottom: 10px;
+    }
+    .info {
+      background: #f3f9ff;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+    label { display: block; margin-top: 10px; font-weight: 500; }
+    input, select {
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      width: 100%;
+      margin-top: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 10px;
+      text-align: center;
+    }
+    th {
+      background-color: #004aad;
+      color: #fff;
+    }
+    tbody tr:nth-child(even) {
+      background-color: #f9f9f9;
+    }
+    .total-row td {
+      font-weight: bold;
+      background-color: #e6f0ff;
+    }
+    #amountWords {
+      margin-top: 10px;
+      font-weight: 500;
+    }
+    .actions {
+      text-align: center;
+      margin-top: 30px;
+    }
+    button {
+      background: #004aad;
+      color: #fff;
+      border: none;
+      padding: 12px 20px;
+      margin: 0 8px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+    }
+    button:hover {
+      background: #00337c;
+    }
+    .history-box {
+      max-height: 200px;
+      overflow-y: auto;
+      margin-top: 10px;
+      background: #f5f5f5;
+      padding: 10px;
+      border-radius: 6px;
+    }
+    .history-box button {
+      background: #888;
+      margin: 4px 4px 4px 0;
+      font-size: 13px;
+      padding: 6px 10px;
+    }
+    @media print {
+      .actions, .history-box { display: none !important; }
+      body { background: #fff; }
+      .invoice-box { box-shadow: none; border: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="invoice-box" id="invoice">
+  <div class="header">
+    <img src="https://via.placeholder.com/150x60.png?text=LOGO" alt="Logo" />
+    <h2>SHREE DENTAL STORE</h2>
+    <div class="contact">
+      DMS COMPLEX SHOP NO. 36, IN FRONT OF KRISHNA HOSPITAL, KARAD – 415510<br>
+      Tel: 9527300883, 8888163008 | Email: santoshpatil.2501@gmail.com
+    </div>
+  </div>
+
+  <div class="info">
+    <label>Customer Name</label>
+    <input type="text" id="customerName" placeholder="Enter customer's name">
+    <label>Date</label>
+    <input type="date" id="invoiceDate">
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sr No.</th>
+        <th>Product</th>
+        <th>MRP (₹)</th>
+        <th>Discount Price (₹)</th>
+        <th>Qty</th>
+        <th>GST %</th>
+        <th>GST Amt (₹)</th>
+        <th>Total (₹)</th>
+      </tr>
+    </thead>
+    <tbody id="itemTable"></tbody>
+    <tfoot>
+      <tr class="total-row">
+        <td colspan="6">Total GST (₹)</td>
+        <td id="totalGST">0.00</td>
+        <td></td>
+      </tr>
+      <tr class="total-row">
+        <td colspan="7">Grand Total (₹)</td>
+        <td id="grandTotal">0.00</td>
+      </tr>
+    </tfoot>
+  </table>
+  <div id="amountWords">Amount in Words: ₹ Zero Only</div>
+</div>
+
+<div class="actions">
+  <button onclick="addRow()">➕ Add Item</button>
+  <button onclick="generatePDF()">📄 Download PDF</button>
+  <button onclick="window.print()">🖨️ Print Invoice</button>
+  <button onclick="saveInvoice()">💾 Save Invoice</button>
+  <button onclick="showHistory()">📜 View History</button>
+</div>
+
+<div class="history-box" id="historyBox" style="display:none;">
+  <h4>Saved Invoices:</h4>
+  <div id="invoiceList"></div>
+</div>
+
+<script>
+const dentalItems = [
+  { name: "Tooth Forceps", mrp: 300, discount: 250 },
+  { name: "Explorer", mrp: 120, discount: 100 },
+  { name: "Mouth Mirror", mrp: 80, discount: 65 },
+  { name: "Scaler", mrp: 200, discount: 180 },
+  { name: "Elevator", mrp: 450, discount: 400 },
+  { name: "Cotton Rolls", mrp: 60, discount: 50 },
+  { name: "Gloves", mrp: 350, discount: 300 }
+];
+
+let rowCount = 0;
+
+function addRow(data = {}) {
+  rowCount++;
+  const row = document.createElement("tr");
+  row.innerHTML = `
+    <td>${rowCount}</td>
+    <td>
+      <input type="text" class="product" list="productList" value="${data.name || ''}" onchange="customProduct(this)">
+      <datalist id="productList">
+        ${dentalItems.map(item => `<option value="${item.name}">`).join('')}
+      </datalist>
+    </td>
+    <td><input type="number" value="${data.mrp || 0}" class="mrp" onchange="calculateTotal()"></td>
+    <td><input type="number" value="${data.discount || 0}" class="discount" onchange="calculateTotal()"></td>
+    <td><input type="number" value="${data.qty || 1}" class="qty" onchange="calculateTotal()"></td>
+    <td><input type="number" value="${data.gst || 18}" class="gst" onchange="calculateTotal()"></td>
+    <td class="gstamt">0.00</td>
+    <td class="total">0.00</td>
+  `;
+  document.getElementById("itemTable").appendChild(row);
+  calculateTotal();
+}
+
+function customProduct(input) {
+  const row = input.closest("tr");
+  const name = input.value;
+  const found = dentalItems.find(i => i.name === name);
+  if (found) {
+    row.querySelector(".mrp").value = found.mrp;
+    row.querySelector(".discount").value = found.discount;
+    calculateTotal();
+  }
+}
+
+function calculateTotal() {
+  let totalGST = 0, grandTotal = 0;
+  document.querySelectorAll("#itemTable tr").forEach(row => {
+    const price = parseFloat(row.querySelector(".discount").value || 0);
+    const qty = parseFloat(row.querySelector(".qty").value || 1);
+    const gstRate = parseFloat(row.querySelector(".gst").value || 0);
+    const gstAmt = (price * gstRate / 100) * qty;
+    const total = (price * qty) + gstAmt;
+    row.querySelector(".gstamt").textContent = gstAmt.toFixed(2);
+    row.querySelector(".total").textContent = total.toFixed(2);
+    totalGST += gstAmt;
+    grandTotal += total;
+  });
+  document.getElementById("totalGST").textContent = totalGST.toFixed(2);
+  document.getElementById("grandTotal").textContent = grandTotal.toFixed(2);
+  document.getElementById("amountWords").textContent =
+    "Amount in Words: ₹ " + numberToWords(grandTotal) + " Only";
+}
+
+function numberToWords(n) {
+  const a = ["Zero","One","Two","Three","Four","Five","Six","Seven","Eight","Nine","Ten",
+  "Eleven","Twelve","Thirteen","Fourteen","Fifteen","Sixteen","Seventeen","Eighteen","Nineteen"];
+  const b = ["","","Twenty","Thirty","Forty","Fifty","Sixty","Seventy","Eighty","Ninety"];
+  if (n === 0) return "Zero";
+  n = Math.floor(n);
+  if (n > 999999) return "Amount too large";
+  let words = "";
+  if (Math.floor(n/1000) > 0) {
+    words += numberToWords(Math.floor(n/1000)) + " Thousand ";
+    n %= 1000;
+  }
+  if (Math.floor(n/100) > 0) {
+    words += numberToWords(Math.floor(n/100)) + " Hundred ";
+    n %= 100;
+  }
+  if (n > 0) {
+    words += n < 20 ? a[n] : b[Math.floor(n/10)] + (n % 10 ? " " + a[n % 10] : "");
+  }
+  return words.trim();
+}
+
+function generatePDF() {
+  const invoice = document.getElementById("invoice");
+  html2pdf().from(invoice).save("Dental_Invoice.pdf");
+}
+
+function saveInvoice() {
+  const name = document.getElementById("customerName").value;
+  const date = document.getElementById("invoiceDate").value;
+  const rows = [];
+  document.querySelectorAll("#itemTable tr").forEach(tr => {
+    rows.push({
+      name: tr.querySelector(".product").value,
+      mrp: tr.querySelector(".mrp").value,
+      discount: tr.querySelector(".discount").value,
+      qty: tr.querySelector(".qty").value,
+      gst: tr.querySelector(".gst").value
+    });
+  });
+  const key = `invoice_${Date.now()}`;
+  const data = { name, date, rows };
+  localStorage.setItem(key, JSON.stringify(data));
+  alert("Invoice saved!");
+}
+
+function showHistory() {
+  const box = document.getElementById("historyBox");
+  const list = document.getElementById("invoiceList");
+  list.innerHTML = '';
+  for (let key in localStorage) {
+    if (key.startsWith("invoice_")) {
+      const item = JSON.parse(localStorage.getItem(key));
+      const btn = document.createElement("button");
+      btn.textContent = `${item.name} (${item.date})`;
+      btn.onclick = () => loadInvoice(item);
+      list.appendChild(btn);
+    }
+  }
+  box.style.display = "block";
+}
+
+function loadInvoice(data) {
+  document.getElementById("customerName").value = data.name;
+  document.getElementById("invoiceDate").value = data.date;
+  document.getElementById("itemTable").innerHTML = '';
+  rowCount = 0;
+  data.rows.forEach(row => addRow(row));
+}
+window.onload = () => addRow();
+</script>
+</body>
+</html>
+
+
+
+
+
